@@ -46,9 +46,9 @@
       --md-elevation-2: 0px 2px 6px 2px rgba(0, 0, 0, 0.15), 0px 1px 2px 0px rgba(0, 0, 0, 0.30);
 
       --md-shape-corner-small: 8px;
+      --md-shape-corner-medium: 12px;
       --md-shape-corner-large: 16px;
       --md-shape-corner-full: 9999px;
-      --md-motion-standard: cubic-bezier(0.2, 0.0, 0, 1.0);
     }
 
     * {
@@ -167,13 +167,6 @@
       outline: none;
     }
 
-    .m3-select:focus {
-      border-color: var(--md-sys-color-primary);
-      border-width: 2px;
-      padding-left: 13px;
-      background-color: var(--md-sys-color-surface-container-lowest);
-    }
-
     .select-arrow {
       position: absolute;
       right: 12px;
@@ -251,29 +244,44 @@
       outline: 3px solid var(--md-sys-color-primary-container);
     }
 
-    .list-header {
+    /* 【改修】セクションヘッダー＆バッジ */
+    .section-title-wrap {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
     }
 
-    .list-headline {
-      font-size: 16px;
+    .section-headline {
+      font-size: 15px;
       font-weight: 700;
-      color: var(--md-sys-color-on-surface);
       display: flex;
       align-items: center;
       gap: 6px;
     }
 
-    .m3-assist-chip {
-      background-color: var(--md-sys-color-secondary-container);
-      color: var(--md-sys-color-on-secondary-container);
+    .chip-attend {
+      background-color: var(--md-sys-color-primary-container);
+      color: var(--md-sys-color-on-primary-container);
       font-size: 12px;
       font-weight: 700;
-      padding: 4px 12px;
-      border-radius: var(--md-shape-corner-small);
+      padding: 3px 10px;
+      border-radius: var(--md-shape-corner-full);
+    }
+
+    .chip-absent {
+      background-color: var(--md-sys-color-surface-container-highest);
+      color: var(--md-sys-color-outline);
+      font-size: 12px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: var(--md-shape-corner-full);
+    }
+
+    .section-divider {
+      height: 1px;
+      background-color: var(--md-sys-color-surface-container-highest);
+      margin: 18px 0;
     }
 
     .attendee-list {
@@ -286,15 +294,15 @@
       display: flex;
       align-items: center;
       gap: 12px;
-      padding: 10px 0;
+      padding: 8px 0;
       border-bottom: 1px solid var(--md-sys-color-surface-container);
     }
 
     .attendee-item:last-child { border-bottom: none; }
 
     .avatar-wrapper {
-      width: 40px;
-      height: 40px;
+      width: 36px;
+      height: 36px;
       border-radius: 50%;
       background-color: var(--md-sys-color-surface-container-highest);
       overflow: hidden;
@@ -307,8 +315,6 @@
 
     .avatar-img { width: 100%; height: 100%; object-fit: cover; }
 
-    .attendee-meta { flex: 1; min-width: 0; }
-
     .attendee-name {
       font-size: 14px;
       font-weight: 500;
@@ -318,24 +324,11 @@
       text-overflow: ellipsis;
     }
 
-    .status-badge {
-      font-size: 12px;
-      font-weight: 700;
-      padding: 4px 10px;
-      border-radius: var(--md-shape-corner-full);
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-    }
-
-    .badge-attend {
-      background-color: var(--md-sys-color-primary-container);
-      color: var(--md-sys-color-on-primary-container);
-    }
-
-    .badge-absent {
-      background-color: var(--md-sys-color-surface-container-highest);
+    .empty-text {
+      font-size: 13px;
       color: var(--md-sys-color-outline);
+      padding: 8px 0;
+      text-align: center;
     }
 
     .empty-state {
@@ -399,7 +392,7 @@
       <div class="field-wrapper">
         <label class="field-label" for="eventSelect">
           <span class="material-symbols-outlined" style="font-size: 14px;">calendar_month</span>
-          イベントを選択
+          イベントを選択（直近順）
         </label>
         <div class="select-container">
           <select id="eventSelect" class="m3-select" onchange="onSelectEvent()"></select>
@@ -433,32 +426,44 @@
       </div>
     </section>
 
+    <!-- 【改修】参加者・不参加者 分離カード -->
     <section class="m3-card">
-      <div class="list-header">
-        <h2 class="list-headline">
-          <span class="material-symbols-outlined" style="color: var(--md-sys-color-primary);">group</span>
-          <span>回答状況</span>
+      <!-- 参加者エリア -->
+      <div class="section-title-wrap">
+        <h2 class="section-headline" style="color: var(--md-sys-color-primary);">
+          <span class="material-symbols-outlined">check_circle</span>
+          <span>参加者</span>
         </h2>
-        <span class="m3-assist-chip" id="countBadge">参加 0名</span>
+        <span class="chip-attend" id="attendCountChip">0名</span>
       </div>
+      <ul class="attendee-list" id="attendList"></ul>
 
-      <ul class="attendee-list" id="attendeeList"></ul>
+      <div class="section-divider"></div>
+
+      <!-- 不参加者エリア -->
+      <div class="section-title-wrap">
+        <h2 class="section-headline" style="color: var(--md-sys-color-outline);">
+          <span class="material-symbols-outlined">cancel</span>
+          <span>不参加</span>
+        </h2>
+        <span class="chip-absent" id="absentCountChip">0名</span>
+      </div>
+      <ul class="attendee-list" id="absentList"></ul>
     </section>
 
   </main>
 
   <script>
     // ★ 1. LINE Developersで発行したLIFF ID
-    const LIFF_ID = "2012168227-DjHQL1TU";
+    const LIFF_ID = "YOUR_LIFF_ID";
 
     // ★ 2. GASのウェブアプリURL（/exec で終わるURL）
-    const GAS_API_URL = "https://script.google.com/macros/s/AKfycby-0JqjobCyEInDrMmjdAMc4eWByg-u3N1pIXCrGm2itxtG-Pdv3drG7LPo8-X8K0PxeQ/exec";
+    const GAS_API_URL = "YOUR_GAS_WEBAPP_URL";
 
     let currentUser = { uid: '', name: '', iconUrl: '' };
     let currentEventId = '';
 
     window.onload = async function() {
-      // URLパラメータ ?eventId=... の取得
       const urlParams = new URLSearchParams(window.location.search);
       currentEventId = urlParams.get('eventId') || '';
 
@@ -497,7 +502,7 @@
           document.getElementById('loadingScreen').innerHTML = `
             <div class="empty-state">
               <span class="material-symbols-outlined">event_busy</span>
-              <p>現在受付中のイベントはありません。</p>
+              <p>現在受付中の予定はありません。<br>（終了したイベントは自動非表示になります）</p>
             </div>`;
           return;
         }
@@ -553,8 +558,12 @@
 
       const attendees = data.attendees || [];
       const attendList = attendees.filter(a => a.status === '参加');
-      document.getElementById('countBadge').textContent = `参加 ${attendList.length}名 / 全 ${attendees.length}名`;
+      const absentList = attendees.filter(a => a.status === '不参加');
 
+      document.getElementById('attendCountChip').textContent = `${attendList.length}名`;
+      document.getElementById('absentCountChip').textContent = `${absentList.length}名`;
+
+      // 自身の選択ボタンスタイル反映
       const myRecord = attendees.find(a => a.uid === currentUser.uid);
       const btnAttend = document.getElementById('btnAttend');
       const btnAbsent = document.getElementById('btnAbsent');
@@ -563,69 +572,65 @@
       btnAbsent.classList.remove('is-active');
 
       if (myRecord) {
-        if (myRecord.status === '参加') {
-          btnAttend.classList.add('is-active');
-        } else if (myRecord.status === '不参加') {
-          btnAbsent.classList.add('is-active');
-        }
+        if (myRecord.status === '参加') btnAttend.classList.add('is-active');
+        if (myRecord.status === '不参加') btnAbsent.classList.add('is-active');
       }
 
-      const listEl = document.getElementById('attendeeList');
-      listEl.innerHTML = '';
-
-      if (attendees.length === 0) {
-        listEl.innerHTML = `
-          <div class="empty-state">
-            <span class="material-symbols-outlined">how_to_reg</span>
-            <p>まだ回答がありません。<br>最初の回答者になりましょう！</p>
-          </div>`;
-        return;
+      // 【改修】参加者リスト描画
+      const attendEl = document.getElementById('attendList');
+      attendEl.innerHTML = '';
+      if (attendList.length === 0) {
+        attendEl.innerHTML = '<li class="empty-text">まだ参加予定の人はいません</li>';
+      } else {
+        attendList.forEach(a => attendEl.appendChild(createAttendeeItem(a)));
       }
 
-      attendees.forEach(a => {
-        const li = document.createElement('li');
-        li.className = 'attendee-item';
+      // 【改修】不参加者リスト描画
+      const absentEl = document.getElementById('absentList');
+      absentEl.innerHTML = '';
+      if (absentList.length === 0) {
+        absentEl.innerHTML = '<li class="empty-text">不参加の回答はありません</li>';
+      } else {
+        absentList.forEach(a => absentEl.appendChild(createAttendeeItem(a)));
+      }
+    }
 
-        const avatarWrapper = document.createElement('div');
-        avatarWrapper.className = 'avatar-wrapper';
+    function createAttendeeItem(person) {
+      const li = document.createElement('li');
+      li.className = 'attendee-item';
 
-        if (a.iconUrl) {
-          const img = document.createElement('img');
-          img.className = 'avatar-img';
-          img.src = a.iconUrl;
-          avatarWrapper.appendChild(img);
-        } else {
-          avatarWrapper.innerHTML = '<span class="material-symbols-outlined" style="font-size:20px;">person</span>';
-        }
+      const avatarWrapper = document.createElement('div');
+      avatarWrapper.className = 'avatar-wrapper';
 
-        const meta = document.createElement('div');
-        meta.className = 'attendee-meta';
+      if (person.iconUrl) {
+        const img = document.createElement('img');
+        img.className = 'avatar-img';
+        img.src = person.iconUrl;
+        avatarWrapper.appendChild(img);
+      } else {
+        avatarWrapper.innerHTML = '<span class="material-symbols-outlined" style="font-size:20px;">person</span>';
+      }
 
-        const name = document.createElement('div');
-        name.className = 'attendee-name';
-        name.textContent = a.name + (a.uid === currentUser.uid ? ' (あなた)' : '');
-        meta.appendChild(name);
+      const name = document.createElement('div');
+      name.className = 'attendee-name';
+      name.textContent = person.name + (person.uid === currentUser.uid ? ' (あなた)' : '');
 
-        const badge = document.createElement('span');
-        const isYes = a.status === '参加';
-        badge.className = `status-badge ${isYes ? 'badge-attend' : 'badge-absent'}`;
-        badge.innerHTML = `<span class="material-symbols-outlined" style="font-size:14px;">${isYes ? 'check' : 'close'}</span>${a.status}`;
-
-        li.appendChild(avatarWrapper);
-        li.appendChild(meta);
-        li.appendChild(badge);
-        listEl.appendChild(li);
-      });
+      li.appendChild(avatarWrapper);
+      li.appendChild(name);
+      return li;
     }
 
     async function submitStatus(status) {
       const eventId = document.getElementById('eventSelect').value;
       if (!eventId) return;
 
-      document.getElementById('countBadge').textContent = '記録中...';
+      if (status === '参加') {
+        document.getElementById('attendCountChip').textContent = '記録中...';
+      } else {
+        document.getElementById('absentCountChip').textContent = '記録中...';
+      }
 
       try {
-        // GASへのPOST通信（CORSプリフライトを回避するため text/plain でJSON文字列を送信）
         const payload = {
           action: 'record',
           eventId: eventId,
