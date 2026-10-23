@@ -45,8 +45,15 @@
       --md-sys-color-error-container: #FFDAD6;
       --md-sys-color-on-error-container: #410002;
 
+      /* M3 Warning / Neutral Roles */
+      --md-sys-color-tertiary-container: #FFDCC1;
+      --md-sys-color-on-tertiary-container: #2E1500;
+
       --md-elevation-1: 0px 1px 3px 1px rgba(0, 0, 0, 0.15), 0px 1px 2px 0px rgba(0, 0, 0, 0.30);
+      --md-elevation-2: 0px 2px 6px 2px rgba(0, 0, 0, 0.15), 0px 1px 2px 0px rgba(0, 0, 0, 0.30);
+
       --md-shape-corner-small: 8px;
+      --md-shape-corner-medium: 12px;
       --md-shape-corner-large: 16px;
       --md-shape-corner-full: 9999px;
     }
@@ -138,27 +145,6 @@
       box-shadow: var(--md-elevation-1);
     }
 
-    /* エラー通知用M3カード */
-    .m3-error-card {
-      background-color: var(--md-sys-color-error-container);
-      color: var(--md-sys-color-on-error-container);
-      border-radius: var(--md-shape-corner-large);
-      padding: 16px;
-      margin-bottom: 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      font-size: 13px;
-    }
-
-    .m3-error-header {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-weight: 700;
-      font-size: 15px;
-    }
-
     .field-wrapper { margin-bottom: 14px; }
 
     .field-label {
@@ -222,6 +208,43 @@
     .meta-row .material-symbols-outlined {
       font-size: 18px;
       color: var(--md-sys-color-primary);
+    }
+
+    /* 【改修】入力期限バッジ（M3 Assist/Filter Chip風） */
+    .deadline-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: var(--md-shape-corner-small);
+      font-size: 13px;
+      font-weight: 700;
+      margin-top: 10px;
+    }
+
+    .deadline-open {
+      background-color: var(--md-sys-color-surface-container);
+      color: var(--md-sys-color-on-surface-variant);
+      border: 1px solid var(--md-sys-color-outline-variant);
+    }
+
+    .deadline-closed {
+      background-color: var(--md-sys-color-error-container);
+      color: var(--md-sys-color-on-error-container);
+    }
+
+    /* 受付終了・過去ログ告知バナー */
+    .locked-banner {
+      background-color: var(--md-sys-color-surface-container);
+      border-radius: var(--md-shape-corner-medium);
+      padding: 12px 16px;
+      margin-top: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--md-sys-color-outline);
     }
 
     .m3-text-field {
@@ -471,23 +494,19 @@
     </div>
   </header>
 
-  <!-- ローディング／エラー画面 -->
   <div id="loadingScreen" class="loading-screen">
     <div class="m3-spinner" id="spinner"></div>
     <p id="loadingText">LINE認証およびデータを読み込み中...</p>
     <div id="errorDetail" style="display: none; width: 100%; max-width: 360px; margin-top: 16px;"></div>
   </div>
 
-  <!-- メインコンテンツ -->
   <main id="mainApp" class="main-container" style="display: none;">
-
-    <div id="runtimeWarning" style="display: none;" class="m3-error-card"></div>
 
     <section class="m3-card">
       <div class="field-wrapper">
         <label class="field-label" for="eventSelect">
           <span class="material-symbols-outlined" style="font-size: 14px;">calendar_month</span>
-          イベントを選択（直近順）
+          イベントを選択
         </label>
         <div class="select-container">
           <select id="eventSelect" class="m3-select" onchange="onSelectEvent()"></select>
@@ -507,35 +526,53 @@
             <span id="eventDesc">--</span>
           </div>
         </div>
+
+        <!-- 【機能1】入力期限表示バッジ -->
+        <div id="deadlineContainer">
+          <div class="deadline-badge" id="deadlineBadge">
+            <span class="material-symbols-outlined" id="deadlineIcon" style="font-size: 16px;">timer</span>
+            <span id="deadlineText">--</span>
+          </div>
+        </div>
       </div>
 
-      <div class="field-wrapper" style="margin-top: 14px; margin-bottom: 4px;">
-        <label class="field-label" for="userComment">
-          <span class="material-symbols-outlined" style="font-size: 14px;">chat_bubble_outline</span>
-          ひとこと備考（任意）
-        </label>
-        <input type="text" id="userComment" class="m3-text-field" placeholder="例: 30分遅れて参加、同伴1名など" maxlength="40">
+      <!-- 入力受付中エリア（締切を過ぎると非表示になります） -->
+      <div id="interactiveArea">
+        <div class="field-wrapper" style="margin-top: 14px; margin-bottom: 4px;">
+          <label class="field-label" for="userComment">
+            <span class="material-symbols-outlined" style="font-size: 14px;">chat_bubble_outline</span>
+            ひとこと備考（任意）
+          </label>
+          <input type="text" id="userComment" class="m3-text-field" placeholder="例: 30分遅れて参加、同伴1名など" maxlength="40">
+        </div>
+
+        <div class="action-group">
+          <button type="button" class="m3-btn m3-btn-attend" id="btnAttend" onclick="submitStatus('参加')">
+            <span class="material-symbols-outlined">check_circle</span>
+            <span>参加する</span>
+          </button>
+          <button type="button" class="m3-btn m3-btn-absent" id="btnAbsent" onclick="submitStatus('不参加')">
+            <span class="material-symbols-outlined">cancel</span>
+            <span>不参加</span>
+          </button>
+        </div>
+
+        <div class="cancel-wrapper" id="cancelWrapper" style="display: none;">
+          <button type="button" class="m3-btn-text-danger" onclick="cancelStatus()">
+            <span class="material-symbols-outlined" style="font-size: 16px;">restart_alt</span>
+            <span>回答を取り消す（未定に戻す）</span>
+          </button>
+        </div>
       </div>
 
-      <div class="action-group">
-        <button type="button" class="m3-btn m3-btn-attend" id="btnAttend" onclick="submitStatus('参加')">
-          <span class="material-symbols-outlined">check_circle</span>
-          <span>参加する</span>
-        </button>
-        <button type="button" class="m3-btn m3-btn-absent" id="btnAbsent" onclick="submitStatus('不参加')">
-          <span class="material-symbols-outlined">cancel</span>
-          <span>不参加</span>
-        </button>
-      </div>
-
-      <div class="cancel-wrapper" id="cancelWrapper" style="display: none;">
-        <button type="button" class="m3-btn-text-danger" onclick="cancelStatus()">
-          <span class="material-symbols-outlined" style="font-size: 16px;">restart_alt</span>
-          <span>回答を取り消す（未定に戻す）</span>
-        </button>
+      <!-- 【機能2】締切超過／過去ログ閲覧バナー（締切後のみ表示） -->
+      <div id="lockedBanner" class="locked-banner" style="display: none;">
+        <span class="material-symbols-outlined" style="color: var(--md-sys-color-error);">lock</span>
+        <span id="lockedText">入力期限を過ぎたため、回答・変更は締め切られました（閲覧専用）</span>
       </div>
     </section>
 
+    <!-- 回答状況カード -->
     <section class="m3-card">
       <div class="section-title-wrap">
         <h2 class="section-headline" style="color: var(--md-sys-color-primary);">
@@ -568,18 +605,16 @@
   </main>
 
   <script>
-    // =========================================================================
-    // ★ 設定エリア：必ずご自身の値に書き換えてください
-    // =========================================================================
-    const LIFF_ID = "2012168227-DjHQL1TU";       // 例: "2001234567-AbCdEfGh"
-    const GAS_API_URL = "https://script.google.com/macros/s/AKfycby-0JqjobCyEInDrMmjdAMc4eWByg-u3N1pIXCrGm2itxtG-Pdv3drG7LPo8-X8K0PxeQ/exec"; // 例: "https://script.google.com/macros/s/.../exec"
-    // =========================================================================
+    // ★ 1. LINE DevelopersのLIFF ID
+    const LIFF_ID = "2012168227-DjHQL1TU";
+
+    // ★ 2. GASのウェブアプリURL（/exec）
+    const GAS_API_URL = "https://script.google.com/macros/s/AKfycby-0JqjobCyEInDrMmjdAMc4eWByg-u3N1pIXCrGm2itxtG-Pdv3drG7LPo8-X8K0PxeQ/exec";
 
     let currentUser = { uid: '', name: '', iconUrl: '' };
     let currentEventId = '';
     let latestDetailData = null;
 
-    // 画面上に分かりやすいエラーを表示する関数
     function showFatalError(title, detailText) {
       document.getElementById('spinner').style.display = 'none';
       document.getElementById('loadingText').style.display = 'none';
@@ -587,65 +622,51 @@
       const errorBox = document.getElementById('errorDetail');
       errorBox.style.display = 'block';
       errorBox.innerHTML = `
-        <div class="m3-error-card" style="text-align: left;">
-          <div class="m3-error-header">
+        <div style="background-color: var(--md-sys-color-error-container); color: var(--md-sys-color-on-error-container); border-radius: 12px; padding: 16px; text-align: left;">
+          <div style="display:flex; align-items:center; gap:8px; font-weight:bold; font-size:15px;">
             <span class="material-symbols-outlined">error</span>
             <span>${title}</span>
           </div>
-          <div style="line-height: 1.6; margin-top: 4px;">${detailText}</div>
+          <div style="line-height:1.6; margin-top:6px; font-size:13px;">${detailText}</div>
         </div>
       `;
     }
 
     window.onload = async function() {
-      // 1. 設定値の事前チェック
       if (!LIFF_ID || LIFF_ID.includes('YOUR_LIFF_ID')) {
-        showFatalError('設定エラー (LIFF ID未設定)', 'HTMLコード内の <code>const LIFF_ID</code> が初期値のままです。LINE Developersで発行した実際のLIFF IDに書き換えてください。');
+        showFatalError('設定エラー', 'HTMLコード内の <code>const LIFF_ID</code> を実際の発行値に書き換えてください。');
         return;
       }
       if (!GAS_API_URL || GAS_API_URL.includes('YOUR_GAS_WEBAPP_URL')) {
-        showFatalError('設定エラー (GAS URL未設定)', 'HTMLコード内の <code>const GAS_API_URL</code> が初期値のままです。GASでデプロイしたウェブアプリURL（/exec）に書き換えてください。');
+        showFatalError('設定エラー', 'HTMLコード内の <code>const GAS_API_URL</code> をデプロイしたURLに書き換えてください。');
         return;
       }
 
       const urlParams = new URLSearchParams(window.location.search);
       currentEventId = urlParams.get('eventId') || '';
 
-      // 2. LIFF初期化処理
       try {
         await liff.init({ liffId: LIFF_ID.trim() });
       } catch (err) {
-        showFatalError(
-          'LIFF初期化エラー',
-          `<b>エラー内容:</b> ${err.message}<br><br>` +
-          `<b>確認ポイント:</b><br>` +
-          `1. LINE Developersの「エンドポイントURL」が現在のGitHub PagesのURL（<code>${window.location.origin + window.location.pathname}</code>）と一致しているか<br>` +
-          `2. LINE Developersのチャネルが「公開（Published）」になっているか<br>` +
-          `3. LIFF設定のScopesで「profile」がONになっているか`
-        );
+        showFatalError('LIFF初期化エラー', err.message);
         return;
       }
 
-      // 3. ログイン認証の判定
       if (!liff.isLoggedIn()) {
-        // LINEアプリ外の場合はログイン画面へ遷移
         liff.login();
         return;
       }
 
-      // 4. プロフィール取得（失敗してもゲスト名で動作を止めないフェイルセーフ）
       try {
         const profile = await liff.getProfile();
         currentUser.uid = profile.userId;
         currentUser.name = profile.displayName;
         currentUser.iconUrl = profile.pictureUrl || '';
       } catch (pErr) {
-        console.warn('Profile取得失敗:', pErr);
         currentUser.uid = 'guest_' + Math.random().toString(36).substring(2, 9);
         currentUser.name = 'LINEゲスト';
       }
 
-      // UIにユーザー名反映
       document.getElementById('userName').textContent = currentUser.name;
       if (currentUser.iconUrl) {
         document.getElementById('userAvatar').src = currentUser.iconUrl;
@@ -654,7 +675,6 @@
       }
       document.getElementById('userChip').style.display = 'flex';
 
-      // 5. カレンダーイベント一覧取得
       await loadEvents();
     };
 
@@ -664,32 +684,59 @@
         const json = await res.json();
 
         if (!json.success) {
-          showFatalError('GAS APIエラー', `カレンダー情報の取得に失敗しました。<br>理由: ${json.error || '不明なエラー'}`);
+          showFatalError('GAS APIエラー', json.error || '不明なエラー');
           return;
         }
 
-        if (!json.events || json.events.length === 0) {
+        const activeList = json.events.active || [];
+        const pastList = json.events.past || [];
+
+        if (activeList.length === 0 && pastList.length === 0) {
           document.getElementById('loadingScreen').innerHTML = `
             <div class="empty-state">
               <span class="material-symbols-outlined">event_busy</span>
-              <p>現在受付中の予定はありません。<br>（Googleカレンダーに「#出欠」を含む今後60日以内の予定を作成してください）</p>
+              <p>現在受付中および過去30日の予定はありません。<br>（Googleカレンダーに「#出欠」を含む予定を作成してください）</p>
             </div>`;
           return;
         }
 
         const select = document.getElementById('eventSelect');
         select.innerHTML = '';
-        json.events.forEach(ev => {
-          const opt = document.createElement('option');
-          opt.value = ev.id;
-          opt.textContent = `${ev.date} - ${ev.title}`;
-          select.appendChild(opt);
-        });
 
-        if (currentEventId && json.events.some(e => e.id === currentEventId)) {
+        // 【機能2】受付中グループの作成
+        if (activeList.length > 0) {
+          const optGroupActive = document.createElement('optgroup');
+          optGroupActive.label = "【受付中】";
+          activeList.forEach(ev => {
+            const opt = document.createElement('option');
+            opt.value = ev.id;
+            opt.textContent = `${ev.date} - ${ev.title}`;
+            optGroupActive.appendChild(opt);
+          });
+          select.appendChild(optGroupActive);
+        }
+
+        // 【機能2】終了・過去ロググループの作成
+        if (pastList.length > 0) {
+          const optGroupPast = document.createElement('optgroup');
+          optGroupPast.label = "【終了・過去ログ】";
+          pastList.forEach(ev => {
+            const opt = document.createElement('option');
+            opt.value = ev.id;
+            const tag = ev.isFinished ? "終了" : "締切済";
+            opt.textContent = `${ev.date} - ${ev.title} (${tag})`;
+            optGroupPast.appendChild(opt);
+          });
+          select.appendChild(optGroupPast);
+        }
+
+        // 選択イベントの決定
+        const allEvents = [...activeList, ...pastList];
+        if (currentEventId && allEvents.some(e => e.id === currentEventId)) {
           select.value = currentEventId;
         } else {
-          currentEventId = json.events[0].id;
+          select.value = allEvents[0].id;
+          currentEventId = allEvents[0].id;
         }
 
         document.getElementById('loadingScreen').style.display = 'none';
@@ -697,7 +744,7 @@
 
         await fetchEventDetail(select.value);
       } catch (err) {
-        showFatalError('通信エラー', `GASへの接続に失敗しました。<br>エラー: ${err.message}<br><br>※GASデプロイ時の「アクセスできるユーザー」が「全員」になっているか確認してください。`);
+        showFatalError('通信エラー', err.message);
       }
     }
 
@@ -723,10 +770,48 @@
       if (!data || !data.event) return;
       latestDetailData = data;
 
-      document.getElementById('eventTitle').textContent = data.event.title;
-      document.getElementById('eventDateTime').textContent = `${data.event.date} ${data.event.time}`;
-      document.getElementById('eventDesc').textContent = data.event.description || '特記事項なし';
+      const ev = data.event;
+      document.getElementById('eventTitle').textContent = ev.title;
+      document.getElementById('eventDateTime').textContent = `${ev.date} ${ev.time}`;
+      document.getElementById('eventDesc').textContent = ev.description || '特記事項なし';
 
+      // 【機能1】入力期限バッジの描画
+      const deadlineBadge = document.getElementById('deadlineBadge');
+      const deadlineIcon = document.getElementById('deadlineIcon');
+      const deadlineText = document.getElementById('deadlineText');
+      const interactiveArea = document.getElementById('interactiveArea');
+      const lockedBanner = document.getElementById('lockedBanner');
+      const lockedText = document.getElementById('lockedText');
+
+      if (ev.isFinished) {
+        // イベント自体が終了
+        deadlineBadge.className = 'deadline-badge deadline-closed';
+        deadlineIcon.textContent = 'event_busy';
+        deadlineText.textContent = `イベント終了（最終結果）`;
+
+        interactiveArea.style.display = 'none';
+        lockedBanner.style.display = 'flex';
+        lockedText.textContent = 'このイベントは終了しました（最終ログ閲覧モード）';
+      } else if (ev.isClosed) {
+        // 2日前締切を過ぎた
+        deadlineBadge.className = 'deadline-badge deadline-closed';
+        deadlineIcon.textContent = 'lock_clock';
+        deadlineText.textContent = `受付終了（締切：${ev.deadlineStr}）`;
+
+        interactiveArea.style.display = 'none';
+        lockedBanner.style.display = 'flex';
+        lockedText.textContent = '開催2日前を過ぎたため、回答・変更は締め切られました（確定）';
+      } else {
+        // 受付中
+        deadlineBadge.className = 'deadline-badge deadline-open';
+        deadlineIcon.textContent = 'timer';
+        deadlineText.textContent = `入力期限：${ev.deadlineStr} まで（2日前締切）`;
+
+        interactiveArea.style.display = 'block';
+        lockedBanner.style.display = 'none';
+      }
+
+      // 出欠人数の集計
       const attendees = data.attendees || [];
       const attendList = attendees.filter(a => a.status === '参加');
       const absentList = attendees.filter(a => a.status === '不参加');
@@ -734,6 +819,7 @@
       document.getElementById('attendCountChip').textContent = `${attendList.length}名`;
       document.getElementById('absentCountChip').textContent = `${absentList.length}名`;
 
+      // 自身の回答状態反映
       const myRecord = attendees.find(a => a.uid === currentUser.uid);
       const btnAttend = document.getElementById('btnAttend');
       const btnAbsent = document.getElementById('btnAbsent');
@@ -747,20 +833,22 @@
         if (myRecord.status === '参加') btnAttend.classList.add('is-active');
         if (myRecord.status === '不参加') btnAbsent.classList.add('is-active');
         commentInput.value = myRecord.comment || '';
-        cancelWrapper.style.display = 'block';
+        cancelWrapper.style.display = (!ev.isClosed && !ev.isFinished) ? 'block' : 'none';
       } else {
         cancelWrapper.style.display = 'none';
         commentInput.value = '';
       }
 
+      // 参加者リスト描画
       const attendEl = document.getElementById('attendList');
       attendEl.innerHTML = '';
       if (attendList.length === 0) {
-        attendEl.innerHTML = '<li class="empty-text">まだ参加予定の人はいません</li>';
+        attendEl.innerHTML = '<li class="empty-text">参加予定の人はいません</li>';
       } else {
         attendList.forEach(a => attendEl.appendChild(createAttendeeItem(a)));
       }
 
+      // 不参加者リスト描画
       const absentEl = document.getElementById('absentList');
       absentEl.innerHTML = '';
       if (absentList.length === 0) {
@@ -887,10 +975,14 @@
       const attendList = attendees.filter(a => a.status === '参加');
       const absentList = attendees.filter(a => a.status === '不参加');
 
-      let text = `【${ev.title}】\n`;
+      const isLog = ev.isFinished || ev.isClosed;
+      let text = `【${ev.title}${isLog ? '（確定・結果）' : ''}】\n`;
       text += `📅 日時：${ev.date} ${ev.time}\n`;
       if (ev.description && ev.description !== '詳細情報なし') {
         text += `📍 場所：${ev.description}\n`;
+      }
+      if (!ev.isFinished) {
+        text += `⏳ 締切：${ev.deadlineStr}（2日前）\n`;
       }
       text += `\n`;
 
