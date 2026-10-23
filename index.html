@@ -210,7 +210,6 @@
       color: var(--md-sys-color-primary);
     }
 
-    /* 【改修】入力期限バッジ（M3 Assist/Filter Chip風） */
     .deadline-badge {
       display: inline-flex;
       align-items: center;
@@ -233,7 +232,6 @@
       color: var(--md-sys-color-on-error-container);
     }
 
-    /* 受付終了・過去ログ告知バナー */
     .locked-banner {
       background-color: var(--md-sys-color-surface-container);
       border-radius: var(--md-shape-corner-medium);
@@ -393,11 +391,12 @@
       flex-direction: column;
     }
 
+    /* 【改修】コメントが長文でもアバターが上揃えになるよう flex-start に変更 */
     .attendee-item {
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       gap: 12px;
-      padding: 8px 0;
+      padding: 10px 0;
       border-bottom: 1px solid var(--md-sys-color-surface-container);
     }
 
@@ -414,6 +413,7 @@
       align-items: center;
       justify-content: center;
       color: var(--md-sys-color-outline);
+      margin-top: 2px; /* 名前の行高とバランス調整 */
     }
 
     .avatar-img { width: 100%; height: 100%; object-fit: cover; }
@@ -429,13 +429,15 @@
       text-overflow: ellipsis;
     }
 
+    /* 【改修】複数行自動折り返し・単語途中改行に対応 */
     .attendee-comment {
       font-size: 12px;
       color: var(--md-sys-color-on-surface-variant);
-      margin-top: 1px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      margin-top: 3px;
+      line-height: 1.45;
+      white-space: normal;
+      word-break: break-word;
+      overflow-wrap: anywhere;
     }
 
     .empty-text {
@@ -527,7 +529,7 @@
           </div>
         </div>
 
-        <!-- 【機能1】入力期限表示バッジ -->
+        <!-- 入力期限表示バッジ -->
         <div id="deadlineContainer">
           <div class="deadline-badge" id="deadlineBadge">
             <span class="material-symbols-outlined" id="deadlineIcon" style="font-size: 16px;">timer</span>
@@ -536,14 +538,15 @@
         </div>
       </div>
 
-      <!-- 入力受付中エリア（締切を過ぎると非表示になります） -->
+      <!-- 入力受付中エリア -->
       <div id="interactiveArea">
         <div class="field-wrapper" style="margin-top: 14px; margin-bottom: 4px;">
           <label class="field-label" for="userComment">
             <span class="material-symbols-outlined" style="font-size: 14px;">chat_bubble_outline</span>
             ひとこと備考（任意）
           </label>
-          <input type="text" id="userComment" class="m3-text-field" placeholder="例: 30分遅れて参加、同伴1名など" maxlength="40">
+          <!-- 【改修】より詳細な備考が書けるよう最大100文字に拡張 -->
+          <input type="text" id="userComment" class="m3-text-field" placeholder="例: 30分遅れて参加、同伴1名など" maxlength="100">
         </div>
 
         <div class="action-group">
@@ -565,7 +568,7 @@
         </div>
       </div>
 
-      <!-- 【機能2】締切超過／過去ログ閲覧バナー（締切後のみ表示） -->
+      <!-- 締切超過／過去ログ閲覧バナー -->
       <div id="lockedBanner" class="locked-banner" style="display: none;">
         <span class="material-symbols-outlined" style="color: var(--md-sys-color-error);">lock</span>
         <span id="lockedText">入力期限を過ぎたため、回答・変更は締め切られました（閲覧専用）</span>
@@ -605,10 +608,7 @@
   </main>
 
   <script>
-    // ★ 1. LINE DevelopersのLIFF ID
     const LIFF_ID = "2012168227-DjHQL1TU";
-
-    // ★ 2. GASのウェブアプリURL（/exec）
     const GAS_API_URL = "https://script.google.com/macros/s/AKfycby-0JqjobCyEInDrMmjdAMc4eWByg-u3N1pIXCrGm2itxtG-Pdv3drG7LPo8-X8K0PxeQ/exec";
 
     let currentUser = { uid: '', name: '', iconUrl: '' };
@@ -703,7 +703,6 @@
         const select = document.getElementById('eventSelect');
         select.innerHTML = '';
 
-        // 【機能2】受付中グループの作成
         if (activeList.length > 0) {
           const optGroupActive = document.createElement('optgroup');
           optGroupActive.label = "【受付中】";
@@ -716,7 +715,6 @@
           select.appendChild(optGroupActive);
         }
 
-        // 【機能2】終了・過去ロググループの作成
         if (pastList.length > 0) {
           const optGroupPast = document.createElement('optgroup');
           optGroupPast.label = "【終了・過去ログ】";
@@ -730,7 +728,6 @@
           select.appendChild(optGroupPast);
         }
 
-        // 選択イベントの決定
         const allEvents = [...activeList, ...pastList];
         if (currentEventId && allEvents.some(e => e.id === currentEventId)) {
           select.value = currentEventId;
@@ -775,7 +772,6 @@
       document.getElementById('eventDateTime').textContent = `${ev.date} ${ev.time}`;
       document.getElementById('eventDesc').textContent = ev.description || '特記事項なし';
 
-      // 【機能1】入力期限バッジの描画
       const deadlineBadge = document.getElementById('deadlineBadge');
       const deadlineIcon = document.getElementById('deadlineIcon');
       const deadlineText = document.getElementById('deadlineText');
@@ -784,25 +780,22 @@
       const lockedText = document.getElementById('lockedText');
 
       if (ev.isFinished) {
-        // イベント自体が終了
         deadlineBadge.className = 'deadline-badge deadline-closed';
         deadlineIcon.textContent = 'event_busy';
         deadlineText.textContent = `イベント終了（最終結果）`;
 
         interactiveArea.style.display = 'none';
         lockedBanner.style.display = 'flex';
-        lockedText.textContent = 'イベント終了';
+        lockedText.textContent = 'このイベントは終了しました（最終ログ閲覧モード）';
       } else if (ev.isClosed) {
-        // 2日前締切を過ぎた
         deadlineBadge.className = 'deadline-badge deadline-closed';
         deadlineIcon.textContent = 'lock_clock';
         deadlineText.textContent = `受付終了（締切：${ev.deadlineStr}）`;
 
         interactiveArea.style.display = 'none';
         lockedBanner.style.display = 'flex';
-        lockedText.textContent = '開催2日前を過ぎたため、回答・変更は締め切られました（確定）';
+        lockedText.textContent = '入力期限を過ぎたため、回答・変更は締め切られました（確定）';
       } else {
-        // 受付中
         deadlineBadge.className = 'deadline-badge deadline-open';
         deadlineIcon.textContent = 'timer';
         deadlineText.textContent = `入力期限：${ev.deadlineStr} まで`;
@@ -811,7 +804,6 @@
         lockedBanner.style.display = 'none';
       }
 
-      // 出欠人数の集計
       const attendees = data.attendees || [];
       const attendList = attendees.filter(a => a.status === '参加');
       const absentList = attendees.filter(a => a.status === '不参加');
@@ -819,7 +811,6 @@
       document.getElementById('attendCountChip').textContent = `${attendList.length}名`;
       document.getElementById('absentCountChip').textContent = `${absentList.length}名`;
 
-      // 自身の回答状態反映
       const myRecord = attendees.find(a => a.uid === currentUser.uid);
       const btnAttend = document.getElementById('btnAttend');
       const btnAbsent = document.getElementById('btnAbsent');
@@ -839,7 +830,6 @@
         commentInput.value = '';
       }
 
-      // 参加者リスト描画
       const attendEl = document.getElementById('attendList');
       attendEl.innerHTML = '';
       if (attendList.length === 0) {
@@ -848,7 +838,6 @@
         attendList.forEach(a => attendEl.appendChild(createAttendeeItem(a)));
       }
 
-      // 不参加者リスト描画
       const absentEl = document.getElementById('absentList');
       absentEl.innerHTML = '';
       if (absentList.length === 0) {
