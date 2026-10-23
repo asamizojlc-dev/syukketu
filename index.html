@@ -791,7 +791,7 @@
 
         interactiveArea.style.display = 'none';
         lockedBanner.style.display = 'flex';
-        lockedText.textContent = 'このイベントは終了しました（最終ログ閲覧モード）';
+        lockedText.textContent = 'イベント終了';
       } else if (ev.isClosed) {
         // 2日前締切を過ぎた
         deadlineBadge.className = 'deadline-badge deadline-closed';
@@ -805,7 +805,7 @@
         // 受付中
         deadlineBadge.className = 'deadline-badge deadline-open';
         deadlineIcon.textContent = 'timer';
-        deadlineText.textContent = `入力期限：${ev.deadlineStr} まで（2日前締切）`;
+        deadlineText.textContent = `入力期限：${ev.deadlineStr} まで`;
 
         interactiveArea.style.display = 'block';
         lockedBanner.style.display = 'none';
