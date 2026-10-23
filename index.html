@@ -41,6 +41,7 @@
 
       --md-sys-color-outline: #707973;
       --md-sys-color-outline-variant: #BFC9C2;
+      --md-sys-color-error: #BA1A1A;
 
       --md-elevation-1: 0px 1px 3px 1px rgba(0, 0, 0, 0.15), 0px 1px 2px 0px rgba(0, 0, 0, 0.30);
       --md-elevation-2: 0px 2px 6px 2px rgba(0, 0, 0, 0.15), 0px 1px 2px 0px rgba(0, 0, 0, 0.30);
@@ -138,7 +139,7 @@
       box-shadow: var(--md-elevation-1);
     }
 
-    .field-wrapper { margin-bottom: 16px; }
+    .field-wrapper { margin-bottom: 14px; }
 
     .field-label {
       font-size: 12px;
@@ -203,12 +204,33 @@
       color: var(--md-sys-color-primary);
     }
 
+    /* M3 Outlined Text Field（ひとこと備考） */
+    .m3-text-field {
+      width: 100%;
+      background-color: var(--md-sys-color-surface-container-low);
+      border: 1px solid var(--md-sys-color-outline-variant);
+      border-radius: var(--md-shape-corner-small);
+      padding: 10px 14px;
+      font-size: 14px;
+      color: var(--md-sys-color-on-surface);
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s, background-color 0.2s;
+    }
+
+    .m3-text-field:focus {
+      border-color: var(--md-sys-color-primary);
+      border-width: 2px;
+      padding: 9px 13px;
+      background-color: var(--md-sys-color-surface-container-lowest);
+    }
+
     .action-group {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 12px;
-      margin-top: 18px;
-      padding-top: 16px;
+      margin-top: 14px;
+      padding-top: 14px;
       border-top: 1px solid var(--md-sys-color-surface-container-highest);
     }
 
@@ -244,7 +266,59 @@
       outline: 3px solid var(--md-sys-color-primary-container);
     }
 
-    /* 【改修】セクションヘッダー＆バッジ */
+    /* M3 Text Button（回答取り消し） */
+    .cancel-wrapper {
+      text-align: center;
+      margin-top: 8px;
+    }
+
+    .m3-btn-text-danger {
+      background: none;
+      border: none;
+      color: var(--md-sys-color-outline);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      padding: 6px 12px;
+      border-radius: var(--md-shape-corner-full);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: background-color 0.2s, color 0.2s;
+    }
+
+    .m3-btn-text-danger:hover {
+      background-color: var(--md-sys-color-surface-container);
+      color: var(--md-sys-color-error);
+    }
+
+    /* M3 Tonal Button（LINE共有テキストコピー） */
+    .copy-banner {
+      margin-top: 16px;
+      padding-top: 14px;
+      border-top: 1px solid var(--md-sys-color-surface-container-highest);
+    }
+
+    .m3-btn-tonal {
+      width: 100%;
+      height: 44px;
+      background-color: var(--md-sys-color-secondary-container);
+      color: var(--md-sys-color-on-secondary-container);
+      border: none;
+      border-radius: var(--md-shape-corner-full);
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: background-color 0.2s, transform 0.1s;
+    }
+
+    .m3-btn-tonal:active { transform: scale(0.98); }
+
+    /* リストエリア */
     .section-title-wrap {
       display: flex;
       align-items: center;
@@ -315,10 +389,24 @@
 
     .avatar-img { width: 100%; height: 100%; object-fit: cover; }
 
+    .attendee-content {
+      flex: 1;
+      min-width: 0;
+    }
+
     .attendee-name {
       font-size: 14px;
       font-weight: 500;
       color: var(--md-sys-color-on-surface);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .attendee-comment {
+      font-size: 12px;
+      color: var(--md-sys-color-on-surface-variant);
+      margin-top: 1px;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -367,7 +455,6 @@
 </head>
 <body>
 
-  <!-- Top App Bar -->
   <header class="top-app-bar">
     <div class="brand">
       <span class="material-symbols-outlined">event_available</span>
@@ -379,13 +466,11 @@
     </div>
   </header>
 
-  <!-- Loading State -->
   <div id="loadingScreen" class="loading-screen">
     <div class="m3-spinner"></div>
     <p>LINE認証およびデータを読み込み中...</p>
   </div>
 
-  <!-- Main View -->
   <main id="mainApp" class="main-container" style="display: none;">
 
     <section class="m3-card">
@@ -414,6 +499,16 @@
         </div>
       </div>
 
+      <!-- 【機能1】ひとこと備考欄 -->
+      <div class="field-wrapper" style="margin-top: 14px; margin-bottom: 4px;">
+        <label class="field-label" for="userComment">
+          <span class="material-symbols-outlined" style="font-size: 14px;">chat_bubble_outline</span>
+          ひとこと備考（任意）
+        </label>
+        <input type="text" id="userComment" class="m3-text-field" placeholder="例: 30分遅れて参加、同伴1名など" maxlength="40">
+      </div>
+
+      <!-- 出欠アクションボタン -->
       <div class="action-group">
         <button type="button" class="m3-btn m3-btn-attend" id="btnAttend" onclick="submitStatus('参加')">
           <span class="material-symbols-outlined">check_circle</span>
@@ -424,9 +519,17 @@
           <span>不参加</span>
         </button>
       </div>
+
+      <!-- 【機能2】回答取り消しボタン -->
+      <div class="cancel-wrapper" id="cancelWrapper" style="display: none;">
+        <button type="button" class="m3-btn-text-danger" onclick="cancelStatus()">
+          <span class="material-symbols-outlined" style="font-size: 16px;">restart_alt</span>
+          <span>回答を取り消す（未定に戻す）</span>
+        </button>
+      </div>
     </section>
 
-    <!-- 【改修】参加者・不参加者 分離カード -->
+    <!-- 回答状況カード -->
     <section class="m3-card">
       <!-- 参加者エリア -->
       <div class="section-title-wrap">
@@ -449,19 +552,28 @@
         <span class="chip-absent" id="absentCountChip">0名</span>
       </div>
       <ul class="attendee-list" id="absentList"></ul>
+
+      <!-- 【機能3】LINE共有テキストコピーボタン -->
+      <div class="copy-banner">
+        <button type="button" class="m3-btn-tonal" id="btnCopyShare" onclick="copyShareText()">
+          <span class="material-symbols-outlined" id="copyIcon">content_copy</span>
+          <span id="copyBtnText">LINE共有用に状況をコピー</span>
+        </button>
+      </div>
     </section>
 
   </main>
 
   <script>
-    // ★ 1. LINE Developersで発行したLIFF ID
+    // ★ 1. LINE DevelopersのLIFF ID
     const LIFF_ID = "YOUR_LIFF_ID";
 
-    // ★ 2. GASのウェブアプリURL（/exec で終わるURL）
+    // ★ 2. GASのウェブアプリURL（/exec）
     const GAS_API_URL = "YOUR_GAS_WEBAPP_URL";
 
     let currentUser = { uid: '', name: '', iconUrl: '' };
     let currentEventId = '';
+    let latestDetailData = null; // 共有テキスト生成用キャッシュ
 
     window.onload = async function() {
       const urlParams = new URLSearchParams(window.location.search);
@@ -551,6 +663,7 @@
 
     function renderDetail(data) {
       if (!data || !data.event) return;
+      latestDetailData = data;
 
       document.getElementById('eventTitle').textContent = data.event.title;
       document.getElementById('eventDateTime').textContent = `${data.event.date} ${data.event.time}`;
@@ -563,10 +676,12 @@
       document.getElementById('attendCountChip').textContent = `${attendList.length}名`;
       document.getElementById('absentCountChip').textContent = `${absentList.length}名`;
 
-      // 自身の選択ボタンスタイル反映
+      // 自身の回答状態判定
       const myRecord = attendees.find(a => a.uid === currentUser.uid);
       const btnAttend = document.getElementById('btnAttend');
       const btnAbsent = document.getElementById('btnAbsent');
+      const cancelWrapper = document.getElementById('cancelWrapper');
+      const commentInput = document.getElementById('userComment');
 
       btnAttend.classList.remove('is-active');
       btnAbsent.classList.remove('is-active');
@@ -574,9 +689,14 @@
       if (myRecord) {
         if (myRecord.status === '参加') btnAttend.classList.add('is-active');
         if (myRecord.status === '不参加') btnAbsent.classList.add('is-active');
+        commentInput.value = myRecord.comment || '';
+        cancelWrapper.style.display = 'block'; // 回答済みなら取り消しボタン表示
+      } else {
+        cancelWrapper.style.display = 'none';
+        commentInput.value = '';
       }
 
-      // 【改修】参加者リスト描画
+      // 参加者リスト描画
       const attendEl = document.getElementById('attendList');
       attendEl.innerHTML = '';
       if (attendList.length === 0) {
@@ -585,7 +705,7 @@
         attendList.forEach(a => attendEl.appendChild(createAttendeeItem(a)));
       }
 
-      // 【改修】不参加者リスト描画
+      // 不参加者リスト描画
       const absentEl = document.getElementById('absentList');
       absentEl.innerHTML = '';
       if (absentList.length === 0) {
@@ -611,18 +731,32 @@
         avatarWrapper.innerHTML = '<span class="material-symbols-outlined" style="font-size:20px;">person</span>';
       }
 
+      const content = document.createElement('div');
+      content.className = 'attendee-content';
+
       const name = document.createElement('div');
       name.className = 'attendee-name';
       name.textContent = person.name + (person.uid === currentUser.uid ? ' (あなた)' : '');
+      content.appendChild(name);
+
+      // 備考があれば表示
+      if (person.comment && person.comment.trim() !== '') {
+        const comment = document.createElement('div');
+        comment.className = 'attendee-comment';
+        comment.textContent = `💬 ${person.comment}`;
+        content.appendChild(comment);
+      }
 
       li.appendChild(avatarWrapper);
-      li.appendChild(name);
+      li.appendChild(content);
       return li;
     }
 
     async function submitStatus(status) {
       const eventId = document.getElementById('eventSelect').value;
       if (!eventId) return;
+
+      const comment = document.getElementById('userComment').value.trim();
 
       if (status === '参加') {
         document.getElementById('attendCountChip').textContent = '記録中...';
@@ -637,7 +771,8 @@
           uid: currentUser.uid,
           name: currentUser.name,
           status: status,
-          iconUrl: currentUser.iconUrl
+          iconUrl: currentUser.iconUrl,
+          comment: comment
         };
 
         const res = await fetch(GAS_API_URL, {
@@ -654,6 +789,103 @@
       } catch (err) {
         alert('通信エラーが発生しました: ' + err.message);
       }
+    }
+
+    // 【機能2】回答取り消し処理
+    async function cancelStatus() {
+      const eventId = document.getElementById('eventSelect').value;
+      if (!eventId) return;
+
+      if (!confirm('回答を取り消して未定に戻しますか？')) {
+        return;
+      }
+
+      document.getElementById('attendCountChip').textContent = '更新中...';
+      document.getElementById('absentCountChip').textContent = '更新中...';
+
+      try {
+        const payload = {
+          action: 'cancel',
+          eventId: eventId,
+          uid: currentUser.uid
+        };
+
+        const res = await fetch(GAS_API_URL, {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        });
+
+        const json = await res.json();
+        if (json.success && json.data) {
+          renderDetail(json.data);
+        } else {
+          alert('取り消しエラー: ' + (json.error || '不明なエラー'));
+        }
+      } catch (err) {
+        alert('通信エラーが発生しました: ' + err.message);
+      }
+    }
+
+    // 【機能3】LINE共有テキストのコピー処理
+    function copyShareText() {
+      if (!latestDetailData || !latestDetailData.event) return;
+
+      const ev = latestDetailData.event;
+      const attendees = latestDetailData.attendees || [];
+      const attendList = attendees.filter(a => a.status === '参加');
+      const absentList = attendees.filter(a => a.status === '不参加');
+
+      let text = `【${ev.title}】\n`;
+      text += `📅 日時：${ev.date} ${ev.time}\n`;
+      if (ev.description && ev.description !== '詳細情報なし') {
+        text += `📍 場所：${ev.description}\n`;
+      }
+      text += `\n`;
+
+      text += `◯ 参加（${attendList.length}名）：\n`;
+      if (attendList.length === 0) {
+        text += `・（なし）\n`;
+      } else {
+        attendList.forEach(a => {
+          text += `・${a.name}${a.comment ? `（${a.comment}）` : ''}\n`;
+        });
+      }
+      text += `\n`;
+
+      text += `✕ 不参加（${absentList.length}名）：\n`;
+      if (absentList.length === 0) {
+        text += `・（なし）\n`;
+      } else {
+        absentList.forEach(a => {
+          text += `・${a.name}${a.comment ? `（${a.comment}）` : ''}\n`;
+        });
+      }
+      text += `\n`;
+
+      // 直通LIFFリンクの付与
+      text += `▼ 出欠の回答・確認はこちら\n`;
+      text += `https://liff.line.me/${LIFF_ID}?eventId=${encodeURIComponent(ev.id)}`;
+
+      // クリップボードへ書き込み
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = document.getElementById('btnCopyShare');
+        const icon = document.getElementById('copyIcon');
+        const label = document.getElementById('copyBtnText');
+
+        icon.textContent = 'check';
+        label.textContent = 'コピーしました！';
+        btn.style.backgroundColor = 'var(--md-sys-color-primary-container)';
+        btn.style.color = 'var(--md-sys-color-on-primary-container)';
+
+        setTimeout(() => {
+          icon.textContent = 'content_copy';
+          label.textContent = 'LINE共有用に状況をコピー';
+          btn.style.backgroundColor = '';
+          btn.style.color = '';
+        }, 2000);
+      }).catch(err => {
+        alert('コピーに失敗しました: ' + err);
+      });
     }
   </script>
 </body>
