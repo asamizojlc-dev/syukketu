@@ -42,12 +42,11 @@
       --md-sys-color-outline: #707973;
       --md-sys-color-outline-variant: #BFC9C2;
       --md-sys-color-error: #BA1A1A;
+      --md-sys-color-error-container: #FFDAD6;
+      --md-sys-color-on-error-container: #410002;
 
       --md-elevation-1: 0px 1px 3px 1px rgba(0, 0, 0, 0.15), 0px 1px 2px 0px rgba(0, 0, 0, 0.30);
-      --md-elevation-2: 0px 2px 6px 2px rgba(0, 0, 0, 0.15), 0px 1px 2px 0px rgba(0, 0, 0, 0.30);
-
       --md-shape-corner-small: 8px;
-      --md-shape-corner-medium: 12px;
       --md-shape-corner-large: 16px;
       --md-shape-corner-full: 9999px;
     }
@@ -139,6 +138,27 @@
       box-shadow: var(--md-elevation-1);
     }
 
+    /* エラー通知用M3カード */
+    .m3-error-card {
+      background-color: var(--md-sys-color-error-container);
+      color: var(--md-sys-color-on-error-container);
+      border-radius: var(--md-shape-corner-large);
+      padding: 16px;
+      margin-bottom: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 13px;
+    }
+
+    .m3-error-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 700;
+      font-size: 15px;
+    }
+
     .field-wrapper { margin-bottom: 14px; }
 
     .field-label {
@@ -204,7 +224,6 @@
       color: var(--md-sys-color-primary);
     }
 
-    /* M3 Outlined Text Field（ひとこと備考） */
     .m3-text-field {
       width: 100%;
       background-color: var(--md-sys-color-surface-container-low);
@@ -215,7 +234,6 @@
       color: var(--md-sys-color-on-surface);
       font-family: inherit;
       outline: none;
-      transition: border-color 0.2s, background-color 0.2s;
     }
 
     .m3-text-field:focus {
@@ -266,7 +284,6 @@
       outline: 3px solid var(--md-sys-color-primary-container);
     }
 
-    /* M3 Text Button（回答取り消し） */
     .cancel-wrapper {
       text-align: center;
       margin-top: 8px;
@@ -284,15 +301,8 @@
       display: inline-flex;
       align-items: center;
       gap: 4px;
-      transition: background-color 0.2s, color 0.2s;
     }
 
-    .m3-btn-text-danger:hover {
-      background-color: var(--md-sys-color-surface-container);
-      color: var(--md-sys-color-error);
-    }
-
-    /* M3 Tonal Button（LINE共有テキストコピー） */
     .copy-banner {
       margin-top: 16px;
       padding-top: 14px;
@@ -313,12 +323,8 @@
       align-items: center;
       justify-content: center;
       gap: 6px;
-      transition: background-color 0.2s, transform 0.1s;
     }
 
-    .m3-btn-tonal:active { transform: scale(0.98); }
-
-    /* リストエリア */
     .section-title-wrap {
       display: flex;
       align-items: center;
@@ -389,10 +395,7 @@
 
     .avatar-img { width: 100%; height: 100%; object-fit: cover; }
 
-    .attendee-content {
-      flex: 1;
-      min-width: 0;
-    }
+    .attendee-content { flex: 1; min-width: 0; }
 
     .attendee-name {
       font-size: 14px;
@@ -439,6 +442,8 @@
       gap: 16px;
       color: var(--md-sys-color-on-surface-variant);
       font-size: 14px;
+      padding: 24px;
+      text-align: center;
     }
 
     .m3-spinner {
@@ -466,12 +471,17 @@
     </div>
   </header>
 
+  <!-- ローディング／エラー画面 -->
   <div id="loadingScreen" class="loading-screen">
-    <div class="m3-spinner"></div>
-    <p>LINE認証およびデータを読み込み中...</p>
+    <div class="m3-spinner" id="spinner"></div>
+    <p id="loadingText">LINE認証およびデータを読み込み中...</p>
+    <div id="errorDetail" style="display: none; width: 100%; max-width: 360px; margin-top: 16px;"></div>
   </div>
 
+  <!-- メインコンテンツ -->
   <main id="mainApp" class="main-container" style="display: none;">
+
+    <div id="runtimeWarning" style="display: none;" class="m3-error-card"></div>
 
     <section class="m3-card">
       <div class="field-wrapper">
@@ -499,7 +509,6 @@
         </div>
       </div>
 
-      <!-- 【機能1】ひとこと備考欄 -->
       <div class="field-wrapper" style="margin-top: 14px; margin-bottom: 4px;">
         <label class="field-label" for="userComment">
           <span class="material-symbols-outlined" style="font-size: 14px;">chat_bubble_outline</span>
@@ -508,7 +517,6 @@
         <input type="text" id="userComment" class="m3-text-field" placeholder="例: 30分遅れて参加、同伴1名など" maxlength="40">
       </div>
 
-      <!-- 出欠アクションボタン -->
       <div class="action-group">
         <button type="button" class="m3-btn m3-btn-attend" id="btnAttend" onclick="submitStatus('参加')">
           <span class="material-symbols-outlined">check_circle</span>
@@ -520,7 +528,6 @@
         </button>
       </div>
 
-      <!-- 【機能2】回答取り消しボタン -->
       <div class="cancel-wrapper" id="cancelWrapper" style="display: none;">
         <button type="button" class="m3-btn-text-danger" onclick="cancelStatus()">
           <span class="material-symbols-outlined" style="font-size: 16px;">restart_alt</span>
@@ -529,9 +536,7 @@
       </div>
     </section>
 
-    <!-- 回答状況カード -->
     <section class="m3-card">
-      <!-- 参加者エリア -->
       <div class="section-title-wrap">
         <h2 class="section-headline" style="color: var(--md-sys-color-primary);">
           <span class="material-symbols-outlined">check_circle</span>
@@ -543,7 +548,6 @@
 
       <div class="section-divider"></div>
 
-      <!-- 不参加者エリア -->
       <div class="section-title-wrap">
         <h2 class="section-headline" style="color: var(--md-sys-color-outline);">
           <span class="material-symbols-outlined">cancel</span>
@@ -553,7 +557,6 @@
       </div>
       <ul class="attendee-list" id="absentList"></ul>
 
-      <!-- 【機能3】LINE共有テキストコピーボタン -->
       <div class="copy-banner">
         <button type="button" class="m3-btn-tonal" id="btnCopyShare" onclick="copyShareText()">
           <span class="material-symbols-outlined" id="copyIcon">content_copy</span>
@@ -565,56 +568,111 @@
   </main>
 
   <script>
-    // ★ 1. LINE DevelopersのLIFF ID
-    const LIFF_ID = "YOUR_LIFF_ID";
-
-    // ★ 2. GASのウェブアプリURL（/exec）
-    const GAS_API_URL = "YOUR_GAS_WEBAPP_URL";
+    // =========================================================================
+    // ★ 設定エリア：必ずご自身の値に書き換えてください
+    // =========================================================================
+    const LIFF_ID = "YOUR_LIFF_ID";       // 例: "2001234567-AbCdEfGh"
+    const GAS_API_URL = "YOUR_GAS_WEBAPP_URL"; // 例: "https://script.google.com/macros/s/.../exec"
+    // =========================================================================
 
     let currentUser = { uid: '', name: '', iconUrl: '' };
     let currentEventId = '';
-    let latestDetailData = null; // 共有テキスト生成用キャッシュ
+    let latestDetailData = null;
+
+    // 画面上に分かりやすいエラーを表示する関数
+    function showFatalError(title, detailText) {
+      document.getElementById('spinner').style.display = 'none';
+      document.getElementById('loadingText').style.display = 'none';
+
+      const errorBox = document.getElementById('errorDetail');
+      errorBox.style.display = 'block';
+      errorBox.innerHTML = `
+        <div class="m3-error-card" style="text-align: left;">
+          <div class="m3-error-header">
+            <span class="material-symbols-outlined">error</span>
+            <span>${title}</span>
+          </div>
+          <div style="line-height: 1.6; margin-top: 4px;">${detailText}</div>
+        </div>
+      `;
+    }
 
     window.onload = async function() {
+      // 1. 設定値の事前チェック
+      if (!LIFF_ID || LIFF_ID.includes('YOUR_LIFF_ID')) {
+        showFatalError('設定エラー (LIFF ID未設定)', 'HTMLコード内の <code>const LIFF_ID</code> が初期値のままです。LINE Developersで発行した実際のLIFF IDに書き換えてください。');
+        return;
+      }
+      if (!GAS_API_URL || GAS_API_URL.includes('YOUR_GAS_WEBAPP_URL')) {
+        showFatalError('設定エラー (GAS URL未設定)', 'HTMLコード内の <code>const GAS_API_URL</code> が初期値のままです。GASでデプロイしたウェブアプリURL（/exec）に書き換えてください。');
+        return;
+      }
+
       const urlParams = new URLSearchParams(window.location.search);
       currentEventId = urlParams.get('eventId') || '';
 
+      // 2. LIFF初期化処理
       try {
-        await liff.init({ liffId: LIFF_ID });
-        if (!liff.isLoggedIn()) {
-          liff.login();
-          return;
-        }
+        await liff.init({ liffId: LIFF_ID.trim() });
+      } catch (err) {
+        showFatalError(
+          'LIFF初期化エラー',
+          `<b>エラー内容:</b> ${err.message}<br><br>` +
+          `<b>確認ポイント:</b><br>` +
+          `1. LINE Developersの「エンドポイントURL」が現在のGitHub PagesのURL（<code>${window.location.origin + window.location.pathname}</code>）と一致しているか<br>` +
+          `2. LINE Developersのチャネルが「公開（Published）」になっているか<br>` +
+          `3. LIFF設定のScopesで「profile」がONになっているか`
+        );
+        return;
+      }
 
+      // 3. ログイン認証の判定
+      if (!liff.isLoggedIn()) {
+        // LINEアプリ外の場合はログイン画面へ遷移
+        liff.login();
+        return;
+      }
+
+      // 4. プロフィール取得（失敗してもゲスト名で動作を止めないフェイルセーフ）
+      try {
         const profile = await liff.getProfile();
         currentUser.uid = profile.userId;
         currentUser.name = profile.displayName;
         currentUser.iconUrl = profile.pictureUrl || '';
-
-        document.getElementById('userName').textContent = currentUser.name;
-        if (currentUser.iconUrl) {
-          document.getElementById('userAvatar').src = currentUser.iconUrl;
-        } else {
-          document.getElementById('userAvatar').src = 'https://via.placeholder.com/20?text=U';
-        }
-        document.getElementById('userChip').style.display = 'flex';
-
-        await loadEvents();
-      } catch (err) {
-        alert('初期化エラー: ' + err.message);
+      } catch (pErr) {
+        console.warn('Profile取得失敗:', pErr);
+        currentUser.uid = 'guest_' + Math.random().toString(36).substring(2, 9);
+        currentUser.name = 'LINEゲスト';
       }
+
+      // UIにユーザー名反映
+      document.getElementById('userName').textContent = currentUser.name;
+      if (currentUser.iconUrl) {
+        document.getElementById('userAvatar').src = currentUser.iconUrl;
+      } else {
+        document.getElementById('userAvatar').src = 'https://via.placeholder.com/20?text=U';
+      }
+      document.getElementById('userChip').style.display = 'flex';
+
+      // 5. カレンダーイベント一覧取得
+      await loadEvents();
     };
 
     async function loadEvents() {
       try {
-        const res = await fetch(`${GAS_API_URL}?action=getEvents`);
+        const res = await fetch(`${GAS_API_URL.trim()}?action=getEvents`);
         const json = await res.json();
 
-        if (!json.success || !json.events || json.events.length === 0) {
+        if (!json.success) {
+          showFatalError('GAS APIエラー', `カレンダー情報の取得に失敗しました。<br>理由: ${json.error || '不明なエラー'}`);
+          return;
+        }
+
+        if (!json.events || json.events.length === 0) {
           document.getElementById('loadingScreen').innerHTML = `
             <div class="empty-state">
               <span class="material-symbols-outlined">event_busy</span>
-              <p>現在受付中の予定はありません。<br>（終了したイベントは自動非表示になります）</p>
+              <p>現在受付中の予定はありません。<br>（Googleカレンダーに「#出欠」を含む今後60日以内の予定を作成してください）</p>
             </div>`;
           return;
         }
@@ -639,7 +697,7 @@
 
         await fetchEventDetail(select.value);
       } catch (err) {
-        alert('イベント一覧の取得に失敗しました: ' + err.message);
+        showFatalError('通信エラー', `GASへの接続に失敗しました。<br>エラー: ${err.message}<br><br>※GASデプロイ時の「アクセスできるユーザー」が「全員」になっているか確認してください。`);
       }
     }
 
@@ -651,7 +709,7 @@
 
     async function fetchEventDetail(eventId) {
       try {
-        const res = await fetch(`${GAS_API_URL}?action=getDetail&eventId=${encodeURIComponent(eventId)}`);
+        const res = await fetch(`${GAS_API_URL.trim()}?action=getDetail&eventId=${encodeURIComponent(eventId)}`);
         const json = await res.json();
         if (json.success && json.data) {
           renderDetail(json.data);
@@ -676,7 +734,6 @@
       document.getElementById('attendCountChip').textContent = `${attendList.length}名`;
       document.getElementById('absentCountChip').textContent = `${absentList.length}名`;
 
-      // 自身の回答状態判定
       const myRecord = attendees.find(a => a.uid === currentUser.uid);
       const btnAttend = document.getElementById('btnAttend');
       const btnAbsent = document.getElementById('btnAbsent');
@@ -690,13 +747,12 @@
         if (myRecord.status === '参加') btnAttend.classList.add('is-active');
         if (myRecord.status === '不参加') btnAbsent.classList.add('is-active');
         commentInput.value = myRecord.comment || '';
-        cancelWrapper.style.display = 'block'; // 回答済みなら取り消しボタン表示
+        cancelWrapper.style.display = 'block';
       } else {
         cancelWrapper.style.display = 'none';
         commentInput.value = '';
       }
 
-      // 参加者リスト描画
       const attendEl = document.getElementById('attendList');
       attendEl.innerHTML = '';
       if (attendList.length === 0) {
@@ -705,7 +761,6 @@
         attendList.forEach(a => attendEl.appendChild(createAttendeeItem(a)));
       }
 
-      // 不参加者リスト描画
       const absentEl = document.getElementById('absentList');
       absentEl.innerHTML = '';
       if (absentList.length === 0) {
@@ -739,7 +794,6 @@
       name.textContent = person.name + (person.uid === currentUser.uid ? ' (あなた)' : '');
       content.appendChild(name);
 
-      // 備考があれば表示
       if (person.comment && person.comment.trim() !== '') {
         const comment = document.createElement('div');
         comment.className = 'attendee-comment';
@@ -775,7 +829,7 @@
           comment: comment
         };
 
-        const res = await fetch(GAS_API_URL, {
+        const res = await fetch(GAS_API_URL.trim(), {
           method: 'POST',
           body: JSON.stringify(payload)
         });
@@ -791,7 +845,6 @@
       }
     }
 
-    // 【機能2】回答取り消し処理
     async function cancelStatus() {
       const eventId = document.getElementById('eventSelect').value;
       if (!eventId) return;
@@ -810,7 +863,7 @@
           uid: currentUser.uid
         };
 
-        const res = await fetch(GAS_API_URL, {
+        const res = await fetch(GAS_API_URL.trim(), {
           method: 'POST',
           body: JSON.stringify(payload)
         });
@@ -826,7 +879,6 @@
       }
     }
 
-    // 【機能3】LINE共有テキストのコピー処理
     function copyShareText() {
       if (!latestDetailData || !latestDetailData.event) return;
 
@@ -862,11 +914,9 @@
       }
       text += `\n`;
 
-      // 直通LIFFリンクの付与
       text += `▼ 出欠の回答・確認はこちら\n`;
-      text += `https://liff.line.me/${LIFF_ID}?eventId=${encodeURIComponent(ev.id)}`;
+      text += `https://liff.line.me/${LIFF_ID.trim()}?eventId=${encodeURIComponent(ev.id)}`;
 
-      // クリップボードへ書き込み
       navigator.clipboard.writeText(text).then(() => {
         const btn = document.getElementById('btnCopyShare');
         const icon = document.getElementById('copyIcon');
