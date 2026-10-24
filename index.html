@@ -534,6 +534,7 @@
         </div>
       </div>
 
+      <!-- 入力受付エリア -->
       <div id="interactiveArea">
         <div class="field-wrapper" style="margin-top: 14px; margin-bottom: 4px;">
           <label class="field-label" for="userComment">
@@ -568,7 +569,9 @@
       </div>
     </section>
 
+    <!-- 回答状況カード -->
     <section class="m3-card">
+      <!-- 参加者エリア -->
       <div class="section-title-wrap">
         <h2 class="section-headline" style="color: var(--md-sys-color-primary);">
           <span class="material-symbols-outlined">check_circle</span>
@@ -580,6 +583,7 @@
 
       <div class="section-divider"></div>
 
+      <!-- 不参加者エリア -->
       <div class="section-title-wrap">
         <h2 class="section-headline" style="color: var(--md-sys-color-outline);">
           <span class="material-symbols-outlined">cancel</span>
@@ -822,6 +826,7 @@
         commentInput.value = '';
       }
 
+      // 参加者リスト描画（アイコン＋名前＋コメント）
       const attendEl = document.getElementById('attendList');
       attendEl.innerHTML = '';
       if (attendList.length === 0) {
@@ -830,15 +835,17 @@
         attendList.forEach(a => attendEl.appendChild(createAttendeeItem(a)));
       }
 
+      // 【重要】不参加者リスト描画（アイコン＋名前＋コメントを確実に反映）
       const absentEl = document.getElementById('absentList');
       absentEl.innerHTML = '';
       if (absentList.length === 0) {
         absentEl.innerHTML = '<li class="empty-text">不参加の回答はありません</li>';
       } else {
-        absentEl.forEach(a => absentEl.appendChild(createAttendeeItem(a)));
+        absentList.forEach(a => absentEl.appendChild(createAttendeeItem(a)));
       }
     }
 
+    // 参加者・不参加者 共通アイテム生成関数
     function createAttendeeItem(person) {
       const li = document.createElement('li');
       li.className = 'attendee-item';
@@ -846,10 +853,16 @@
       const avatarWrapper = document.createElement('div');
       avatarWrapper.className = 'avatar-wrapper';
 
-      if (person.iconUrl) {
+      // アイコン画像の描画（未設定または画像エラー時のフォールバック付き）
+      if (person.iconUrl && person.iconUrl.trim() !== '') {
         const img = document.createElement('img');
         img.className = 'avatar-img';
         img.src = person.iconUrl;
+        img.alt = person.name;
+        img.onerror = function() {
+          this.style.display = 'none';
+          avatarWrapper.innerHTML = '<span class="material-symbols-outlined" style="font-size:20px;">person</span>';
+        };
         avatarWrapper.appendChild(img);
       } else {
         avatarWrapper.innerHTML = '<span class="material-symbols-outlined" style="font-size:20px;">person</span>';
@@ -863,6 +876,7 @@
       name.textContent = person.name + (person.uid === currentUser.uid ? ' (あなた)' : '');
       content.appendChild(name);
 
+      // コメントがあれば確実に表示（不参加理由なども表示されます）
       if (person.comment && person.comment.trim() !== '') {
         const comment = document.createElement('div');
         comment.className = 'attendee-comment';
@@ -966,6 +980,7 @@
       }
       text += `\n`;
 
+      // LINE共有テキストは人数のみを出力
       text += `◯ 参加：${attendList.length}名\n`;
       text += `✕ 不参加：${absentList.length}名\n\n`;
 
