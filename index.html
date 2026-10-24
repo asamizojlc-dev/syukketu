@@ -621,4 +621,385 @@
       errorBox.innerHTML = `
         <div style="background-color: var(--md-sys-color-error-container); color: var(--md-sys-color-on-error-container); border-radius: 12px; padding: 16px; text-align: left;">
           <div style="display:flex; align-items:center; gap:8px; font-weight:bold; font-size:15px;">
-            <span class="material
+            <span class="material-symbols-outlined">error</span>
+            <span>${title}</span>
+          </div>
+          <div style="line-height:1.6; margin-top:6px; font-size:13px;">${detailText}</div>
+        </div>
+      `;
+    }
+
+    window.onload = async function() {
+      if (!LIFF_ID || LIFF_ID.includes('YOUR_LIFF_ID')) {
+        showFatalError('設定エラー', 'HTMLコード内の <code>const LIFF_ID</code> を実際の発行値に書き換えてください。');
+        return;
+      }
+      if (!GAS_API_URL || GAS_API_URL.includes('YOUR_GAS_WEBAPP_URL')) {
+        showFatalError('設定エラー', 'HTMLコード内の <code>const GAS_API_URL</code> をデプロイしたURLに書き換えてください。');
+        return;
+      }
+
+      const urlParams = new URLSearchParams(window.location.search);
+      currentEventId = urlParams.get('eventId') || '';
+
+      try {
+        await liff.init({ liffId: LIFF_ID.trim() });
+      } catch (err) {
+        showFatalError('LIFF初期化エラー', err.message);
+        return;
+      }
+
+      if (!liff.isLoggedIn()) {
+        liff.login();
+        return;
+      }
+
+      try {
+        const profile = await liff.getProfile();
+        currentUser.uid = profile.userId;
+        currentUser.name = profile.displayName;
+        currentUser.iconUrl = profile.pictureUrl || '';
+      } catch (pErr) {
+        currentUser.uid = 'guest_' + Math.random().toString(36).substring(2, 9);
+        currentUser.name = 'LINEゲスト';
+      }
+
+      document.getElementById('userName').textContent = currentUser.name;
+      if (currentUser.iconUrl) {
+        document.getElementById('userAvatar').src = currentUser.iconUrl;
+      } else {
+        document.getElementById('userAvatar').src = 'https://via.placeholder.com/20?text=U';
+      }
+      document.getElementById('userChip').style.display = 'flex';
+
+      await loadEvents();
+    };
+
+    async function loadEvents() {
+      try {
+        const res = await fetch(`${GAS_API_URL.trim()}?action=getEvents`);
+        const json = await res.json();
+
+        if (!json.success) {
+          showFatalError('GAS APIエラー', json.error || '不明なエラー');
+          return;
+        }
+
+        const activeList = json.events.active || [];
+        const pastList = json.events.past || [];
+
+        if (activeList.length === 0 && pastList.length === 0) {
+          document.getElementById('loadingScreen').innerHTML = `
+            <div class="empty-state">
+              <span class="material-symbols-outlined">event_busy</span>
+              <p>現在受付中および過去30日の予定はありません。<br>（Googleカレンダーに「#出欠」を含む予定を作成してください）</p>
+            </div>`;
+          return;
+        }
+
+        const select = document.getElementById('eventSelect');
+        select.innerHTML = '';
+
+        if (activeList.length > 0) {
+          const optGroupActive = document.createElement('optgroup');
+          optGroupActive.label = "【受付中】";
+          activeList.forEach(ev => {
+            const opt = document.createElement('option');
+            opt.value = ev.id;
+            opt.textContent = `${ev.date} - ${ev.title}`;
+            optGroupActive.appendChild(opt);
+          });
+          select.appendChild(optGroupActive);
+        }
+
+        if (pastList.length > 0) {
+          const optGroupPast = document.createElement('optgroup');
+          optGroupPast.label = "【終了・過去ログ】";
+          pastList.forEach(ev => {
+            const opt = document.createElement('option');
+            opt.value = ev.id;
+            const tag = ev.isFinished ? "終了" : "締切済";
+            opt.textContent = `${ev.date} - ${ev.title} (${tag})`;
+            optGroupPast.appendChild(opt);
+          });
+          select.appendChild(optGroupPast);
+        }
+
+        const allEvents = [...activeList, ...pastList];
+        if (currentEventId && allEvents.some(e => e.id === currentEventId)) {
+          select.value = currentEventId;
+        } else {
+          select.value = allEvents[0].id;
+          currentEventId = allEvents[0].id;
+        }
+
+        document.getElementById('loadingScreen').style.display = 'none';
+        document.getElementById('mainApp').style.display = 'flex';
+
+        await fetchEventDetail(select.value);
+      } catch (err) {
+        showFatalError('通信エラー', err.message);
+      }
+    }
+
+    function onSelectEvent() {
+      const selectedId = document.getElementById('eventSelect').value;
+      currentEventId = selectedId;
+      fetchEventDetail(selectedId);
+    }
+
+    async function fetchEventDetail(eventId) {
+      try {
+        const res = await fetch(`${GAS_API_URL.trim()}?action=getDetail&eventId=${encodeURIComponent(eventId)}`);
+        const json = await res.json();
+        if (json.success && json.data) {
+          renderDetail(json.data);
+        }
+      } catch (err) {
+        console.error('詳細取得エラー:', err);
+      }
+    }
+
+    function renderDetail(data) {
+      if (!data || !data.event) return;
+      latestDetailData = data;
+
+      const ev = data.event;
+      document.getElementById('eventTitle').textContent = ev.title;
+      document.getElementById('eventDateTime').textContent = `${ev.date} ${ev.time}`;
+      document.getElementById('eventDesc').textContent = ev.description || '特記事項なし';
+
+      const deadlineBadge = document.getElementById('deadlineBadge');
+      const deadlineIcon = document.getElementById('deadlineIcon');
+      const deadlineText = document.getElementById('deadlineText');
+      const interactiveArea = document.getElementById('interactiveArea');
+      const lockedBanner = document.getElementById('lockedBanner');
+      const lockedText = document.getElementById('lockedText');
+
+      if (ev.isFinished) {
+        deadlineBadge.className = 'deadline-badge deadline-closed';
+        deadlineIcon.textContent = 'event_busy';
+        deadlineText.textContent = `イベント終了（最終結果）`;
+
+        interactiveArea.style.display = 'none';
+        lockedBanner.style.display = 'flex';
+        lockedText.textContent = 'このイベントは終了しました（最終ログ閲覧モード）';
+      } else if (ev.isClosed) {
+        deadlineBadge.className = 'deadline-badge deadline-closed';
+        deadlineIcon.textContent = 'lock_clock';
+        deadlineText.textContent = `受付終了（締切：${ev.deadlineStr}）`;
+
+        interactiveArea.style.display = 'none';
+        lockedBanner.style.display = 'flex';
+        lockedText.textContent = '入力期限を過ぎたため、回答・変更は締め切られました（確定）';
+      } else {
+        deadlineBadge.className = 'deadline-badge deadline-open';
+        deadlineIcon.textContent = 'timer';
+        deadlineText.textContent = `入力期限：${ev.deadlineStr} まで`;
+
+        interactiveArea.style.display = 'block';
+        lockedBanner.style.display = 'none';
+      }
+
+      const attendees = data.attendees || [];
+      const attendList = attendees.filter(a => a.status === '参加');
+      const absentList = attendees.filter(a => a.status === '不参加');
+
+      document.getElementById('attendCountChip').textContent = `${attendList.length}名`;
+      document.getElementById('absentCountChip').textContent = `${absentList.length}名`;
+
+      const myRecord = attendees.find(a => a.uid === currentUser.uid);
+      const btnAttend = document.getElementById('btnAttend');
+      const btnAbsent = document.getElementById('btnAbsent');
+      const cancelWrapper = document.getElementById('cancelWrapper');
+      const commentInput = document.getElementById('userComment');
+
+      btnAttend.classList.remove('is-active');
+      btnAbsent.classList.remove('is-active');
+
+      if (myRecord) {
+        if (myRecord.status === '参加') btnAttend.classList.add('is-active');
+        if (myRecord.status === '不参加') btnAbsent.classList.add('is-active');
+        commentInput.value = myRecord.comment || '';
+        cancelWrapper.style.display = (!ev.isClosed && !ev.isFinished) ? 'block' : 'none';
+      } else {
+        cancelWrapper.style.display = 'none';
+        commentInput.value = '';
+      }
+
+      const attendEl = document.getElementById('attendList');
+      attendEl.innerHTML = '';
+      if (attendList.length === 0) {
+        attendEl.innerHTML = '<li class="empty-text">参加予定の人はいません</li>';
+      } else {
+        attendList.forEach(a => attendEl.appendChild(createAttendeeItem(a)));
+      }
+
+      const absentEl = document.getElementById('absentList');
+      absentEl.innerHTML = '';
+      if (absentList.length === 0) {
+        absentEl.innerHTML = '<li class="empty-text">不参加の回答はありません</li>';
+      } else {
+        absentList.forEach(a => absentEl.appendChild(createAttendeeItem(a)));
+      }
+    }
+
+    function createAttendeeItem(person) {
+      const li = document.createElement('li');
+      li.className = 'attendee-item';
+
+      const avatarWrapper = document.createElement('div');
+      avatarWrapper.className = 'avatar-wrapper';
+
+      if (person.iconUrl) {
+        const img = document.createElement('img');
+        img.className = 'avatar-img';
+        img.src = person.iconUrl;
+        avatarWrapper.appendChild(img);
+      } else {
+        avatarWrapper.innerHTML = '<span class="material-symbols-outlined" style="font-size:20px;">person</span>';
+      }
+
+      const content = document.createElement('div');
+      content.className = 'attendee-content';
+
+      const name = document.createElement('div');
+      name.className = 'attendee-name';
+      name.textContent = person.name + (person.uid === currentUser.uid ? ' (あなた)' : '');
+      content.appendChild(name);
+
+      if (person.comment && person.comment.trim() !== '') {
+        const comment = document.createElement('div');
+        comment.className = 'attendee-comment';
+        comment.textContent = `💬 ${person.comment}`;
+        content.appendChild(comment);
+      }
+
+      li.appendChild(avatarWrapper);
+      li.appendChild(content);
+      return li;
+    }
+
+    async function submitStatus(status) {
+      const eventId = document.getElementById('eventSelect').value;
+      if (!eventId) return;
+
+      const comment = document.getElementById('userComment').value.trim();
+
+      if (status === '参加') {
+        document.getElementById('attendCountChip').textContent = '記録中...';
+      } else {
+        document.getElementById('absentCountChip').textContent = '記録中...';
+      }
+
+      try {
+        const payload = {
+          action: 'record',
+          eventId: eventId,
+          uid: currentUser.uid,
+          name: currentUser.name,
+          status: status,
+          iconUrl: currentUser.iconUrl,
+          comment: comment
+        };
+
+        const res = await fetch(GAS_API_URL.trim(), {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        });
+
+        const json = await res.json();
+        if (json.success && json.data) {
+          renderDetail(json.data);
+        } else {
+          alert('登録エラー: ' + (json.error || '不明なエラー'));
+        }
+      } catch (err) {
+        alert('通信エラーが発生しました: ' + err.message);
+      }
+    }
+
+    async function cancelStatus() {
+      const eventId = document.getElementById('eventSelect').value;
+      if (!eventId) return;
+
+      if (!confirm('回答を取り消して未定に戻しますか？')) {
+        return;
+      }
+
+      document.getElementById('attendCountChip').textContent = '更新中...';
+      document.getElementById('absentCountChip').textContent = '更新中...';
+
+      try {
+        const payload = {
+          action: 'cancel',
+          eventId: eventId,
+          uid: currentUser.uid
+        };
+
+        const res = await fetch(GAS_API_URL.trim(), {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        });
+
+        const json = await res.json();
+        if (json.success && json.data) {
+          renderDetail(json.data);
+        } else {
+          alert('取り消しエラー: ' + (json.error || '不明なエラー'));
+        }
+      } catch (err) {
+        alert('通信エラーが発生しました: ' + err.message);
+      }
+    }
+
+    // 【改修】人数のみを出力する共有テキスト生成
+    function copyShareText() {
+      if (!latestDetailData || !latestDetailData.event) return;
+
+      const ev = latestDetailData.event;
+      const attendees = latestDetailData.attendees || [];
+      const attendList = attendees.filter(a => a.status === '参加');
+      const absentList = attendees.filter(a => a.status === '不参加');
+
+      const isLog = ev.isFinished || ev.isClosed;
+      let text = `【${ev.title}${isLog ? '（確定・結果）' : ''}】\n`;
+      text += `📅 日時：${ev.date} ${ev.time}\n`;
+      if (ev.description && ev.description !== '詳細情報なし') {
+        text += `📍 場所：${ev.description}\n`;
+      }
+      if (!ev.isFinished) {
+        text += `⏳ 締切：${ev.deadlineStr}\n`;
+      }
+      text += `\n`;
+
+      // アカウント一覧のループを排除し、人数のみを出力
+      text += `◯ 参加：${attendList.length}名\n`;
+      text += `✕ 不参加：${absentList.length}名\n\n`;
+
+      text += `▼ 出欠の回答・確認はこちら\n`;
+      text += `https://liff.line.me/${LIFF_ID.trim()}?eventId=${encodeURIComponent(ev.id)}`;
+
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = document.getElementById('btnCopyShare');
+        const icon = document.getElementById('copyIcon');
+        const label = document.getElementById('copyBtnText');
+
+        icon.textContent = 'check';
+        label.textContent = 'コピーしました！';
+        btn.style.backgroundColor = 'var(--md-sys-color-primary-container)';
+        btn.style.color = 'var(--md-sys-color-on-primary-container)';
+
+        setTimeout(() => {
+          icon.textContent = 'content_copy';
+          label.textContent = 'LINE共有用に状況をコピー';
+          btn.style.backgroundColor = '';
+          btn.style.color = '';
+        }, 2000);
+      }).catch(err => {
+        alert('コピーに失敗しました: ' + err);
+      });
+    }
+  </script>
+</body>
+</html>
