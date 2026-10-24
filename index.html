@@ -526,7 +526,6 @@
           </div>
         </div>
 
-        <!-- 期限バッジ -->
         <div id="deadlineContainer">
           <div class="deadline-badge" id="deadlineBadge">
             <span class="material-symbols-outlined" id="deadlineIcon" style="font-size: 16px;">timer</span>
@@ -535,7 +534,6 @@
         </div>
       </div>
 
-      <!-- 入力受付エリア -->
       <div id="interactiveArea">
         <div class="field-wrapper" style="margin-top: 14px; margin-bottom: 4px;">
           <label class="field-label" for="userComment">
@@ -564,14 +562,12 @@
         </div>
       </div>
 
-      <!-- 締切・過去ログ告知バナー -->
       <div id="lockedBanner" class="locked-banner" style="display: none;">
         <span class="material-symbols-outlined" style="color: var(--md-sys-color-error);">lock</span>
         <span id="lockedText">入力期限を過ぎたため、回答・変更は締め切られました</span>
       </div>
     </section>
 
-    <!-- 回答状況カード -->
     <section class="m3-card">
       <div class="section-title-wrap">
         <h2 class="section-headline" style="color: var(--md-sys-color-primary);">
@@ -839,7 +835,7 @@
       if (absentList.length === 0) {
         absentEl.innerHTML = '<li class="empty-text">不参加の回答はありません</li>';
       } else {
-        absentList.forEach(a => absentEl.appendChild(createAttendeeItem(a)));
+        absentEl.forEach(a => absentEl.appendChild(createAttendeeItem(a)));
       }
     }
 
@@ -952,7 +948,6 @@
       }
     }
 
-    // 1回目から確実に成功する共有テキストコピー処理
     function copyShareText() {
       if (!latestDetailData || !latestDetailData.event) return;
 
